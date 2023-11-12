@@ -36,7 +36,7 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	// 0 - 1: ID
 	// 2: QR(1): Opcode(4)
 	// buf[2] |= 0x80 // Set QR bit
-	log.Printf("buf: %s", string(buf))
+	log.Printf("buf: %v", buf)
 
 	pc.WriteTo(buf, addr)
 }
