@@ -3,14 +3,20 @@ Socket :: #import "Socket";
 System :: #import "System";
 Posix :: #import "Posix";
 
+RESPONSE_SIZE :: 1024;
+
 main :: () {
 	defer Basic.report_memory_leaks();
 
-	client, success := http_client("google.com", 80);
+	host := "httpbin.org";
+
+	client, success := http_client(host, 80);
 	Basic.assert(success);
 
-	http_get(client, "/");
+	headers: HTTP_Headers;
+	add_header(*headers, "My-Dynamic-Header", "12345");
 
+	http_request(client, "POST", "/anything?key=value1&key=value2&other_key=value", headers);
 }
 
 HTTP_Client :: struct {
@@ -19,14 +25,46 @@ HTTP_Client :: struct {
 	socket: Socket.Socket;
 }
 
-http_get :: (c: HTTP_Client, path: string) {
-	GET_REQUEST := #string DONE
-GET % HTTP/1.0
+HTTP_Headers :: struct {
+	keys: [..] string;
+	keys.allocator = Basic.temp;
+
+	values: [..] string;
+	values.allocator = Basic.temp;
+}
+
+add_header :: (headers: *HTTP_Headers, key: string, value: string) {
+	Basic.array_add(*headers.keys, key);
+	Basic.array_add(*headers.values, value);
+}
+
+to_string :: (headers: HTTP_Headers) -> string {
+	 Basic.assert(headers.keys.count == headers.values.count);
+
+	 builder: Basic.String_Builder;
+	 Basic.init_string_builder(*builder);
+
+	for 0..headers.keys.count-1 {
+		Basic.print_to_builder(*builder, "%: %\n", headers.keys[it], headers.values[it]);
+	}
+	s := Basic.builder_to_string(*builder);
+	s.count -=1;
+	return s;
+}
+
+http_request :: (c: HTTP_Client, http_method: string, path: string, headers := HTTP_Headers.{}) {
+	REQUEST := #string DONE
+% % HTTP/1.0
 Host: %
+%
 
 
 DONE
-	request := Basic.tprint(GET_REQUEST, path, c.host);
+
+	headers_string := to_string(headers);
+	defer Basic.free(headers_string.data);
+
+	request := Basic.tprint(REQUEST, http_method, path, c.host, headers_string);
 	result := Socket.send(c.socket, xx request.data, xx request.count, 0);
 	if result == -1 {
 		Basic.print("unable to send request: % %", result, System.get_error_string(xx result));
@@ -35,7 +73,7 @@ DONE
 		return;
 	}
 
-	buf: [1024]u8;
+	buf: [RESPONSE_SIZE]u8;
 	result = Socket.recv(c.socket, xx buf.data, xx buf.count, 0);
 	if result < 0 {
 			Basic.print("error=%, error_string=%\n", Socket.get_last_socket_error(), System.get_error_string(xx result));
@@ -91,3 +129,19 @@ http_client :: (hostname: string, port: int) -> HTTP_Client, success: bool {
 	}
 	return HTTP_Client.{host=hostname, port=port, socket=sock}, true;
 }
+
+
+/*
+HTTP_Headers :: struct(Key_Type: Type, Value_Type: Type) {
+	keys: [..] Key_Type;
+	keys.allocator = Basic.temp;
+
+	values: [..] Value_Type;
+	values.allocator = Basic.temp;
+}
+
+add_header :: (headers: *HTTP_Headers, key: headers.Key_Type, value: headers.Value_Type) {
+	Basic.array_add(*headers.keys, key);
+	Basic.array_add(*headers.values, value);
+}
+*/
