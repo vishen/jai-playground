@@ -1,4 +1,4 @@
-Basic :: #import "Basic";
+Basic :: #import "Basic"()(MEMORY_DEBUGGER=true);
 String :: #import "String";
 
 My_Enum :: enum {
@@ -194,8 +194,12 @@ parse_notes :: (notes: []string) -> JSON_Options {
 }
 
 main :: () {
+	defer Basic.report_memory_leaks();
+
 	m: My_Struct;
 	Basic.array_add(*m.key_array_resizable_int, 10, 11, 12);
+	defer Basic.free(m.key_array_resizable_int.data);
+
 	m.key_array_view_int = m.key_array_fixed_int;
 
 	serialize(m);
