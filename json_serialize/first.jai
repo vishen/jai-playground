@@ -1,4 +1,5 @@
 Basic :: #import "Basic";
+String :: #import "String";
 
 My_Enum :: enum {
 	Value_1;
@@ -15,8 +16,8 @@ My_Struct :: struct {
 	key_int64: int = 3;
 	key_u64: int = 4;
 	
-	key_float32: float32 = 22.2; @json(name=key_float_renamed)
-	key_float64: float64 = 33.3;
+	key_float32: float32 = 22.2; @json(name=key_float32_renamed) @OtherTag
+	key_float64: float64 = 33.3; @OtherTag
 	
 	key_struct: My_Other_Struct;
 
@@ -34,9 +35,6 @@ My_Other_Struct :: struct {
 	key_int: int = 10;
 	key_bool_true: bool = true;
 	key_bool_false: bool = false;
-
-	// TODO:
-	// - handle json name renames
 }
 
 serialize :: (t: $T) 
@@ -62,8 +60,13 @@ serialize :: (builder: *Basic.String_Builder, data: *void, ti: *Type_Info_Struct
 	Basic.append(builder, #char "{");
 
 	for member, index: ti.members {
-		Basic.print_to_builder(builder, "\"%\":", member.name);
-		
+		opts := parse_notes(member.notes);
+
+		name := member.name;
+		if opts.rename_to {
+			name = opts.rename_to;
+		}
+		Basic.print_to_builder(builder, "\"%\":", name);
 		if member.type.type == {
 		case;
 			serialize(builder, data + member.offset_in_bytes, member.type);
@@ -157,6 +160,37 @@ to_json_value :: (builder: *Basic.String_Builder, value: *void, type: *Type_Info
 	if type.type == .STRING {
 		Basic.append(builder, #char "\"");
 	}
+}
+
+JSON_NOTES_PREFIX :: "json(";
+
+JSON_Options :: struct {
+	rename_to: string;
+}
+
+parse_notes :: (notes: []string) -> JSON_Options {
+	if notes.count == 0  return .{};
+	opts: JSON_Options;
+
+	for *note: notes {
+		s: string;
+		s.data = note.data;
+		s.count = JSON_NOTES_PREFIX.count;
+		if s != JSON_NOTES_PREFIX  continue;
+
+		note.data += JSON_NOTES_PREFIX.count;
+		note.count -= JSON_NOTES_PREFIX.count;
+		if note.data[note.count-1] == #char ")"  note.count -= 1; // TODO: Assert that this is expected
+
+		for part: String.split(<< note, ",") {
+			key_and_value := String.split(part, "=");
+			if key_and_value[0] == {
+			case "name"; opts.rename_to = key_and_value[1];
+			}
+		}
+	}
+
+	return opts;
 }
 
 main :: () {
