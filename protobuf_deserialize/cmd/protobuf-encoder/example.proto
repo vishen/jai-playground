@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = ".;main";
+
+message Message_1 {
+  int32 some_int32 = 1;
+  fixed32 some_fixed32 = 2;
+  fixed64 some_fixed64 = 3;
+  string some_string = 4;
+}
