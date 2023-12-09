@@ -1,0 +1,22 @@
+FROM ubuntu
+
+RUN apt-get update && \
+	apt-get install grub-pc nasm binutils xorriso -y 
+
+WORKDIR kernel
+
+COPY . .
+
+# RUN nasm -f elf64 os.asm
+# RUN ld -n -o os.bin -T linker.ld2 os.o
+# RUN mv os.bin isofiles/boot/
+# RUN grub-mkrescue -o os.iso isofiles
+
+# Build Kernel ELF executable that's Multiboot compliant
+RUN nasm -f elf64 kernel.asm
+RUN nasm -f elf64 multiboot2_header.asm
+RUN ld -n -o kernel.bin -T linker.ld kernel.o multiboot2_header.o
+
+# Build an ISO bootable image of the Kernel
+RUN mv kernel.bin isofiles/boot/
+RUN grub-mkrescue -o kernel.iso isofiles
