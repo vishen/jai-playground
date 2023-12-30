@@ -8,7 +8,7 @@ this case that is grub. This will change eventually where I want to write my own
 ## Running
 
     $ ./build.sh
-    $ qemu-system-x86_64 -cdrom builds/kernel.iso
+    $ qemu-system-x86_64 -drive format=raw,file=builds/kernel.iso
 
 ## Bootloader
 

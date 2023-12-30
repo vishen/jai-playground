@@ -15,7 +15,8 @@ COPY . .
 # Build Kernel ELF executable that's Multiboot compliant
 RUN nasm -f elf64 kernel.asm
 RUN nasm -f elf64 multiboot2_header.asm
-RUN ld -n -o kernel.bin -T linker.ld kernel.o multiboot2_header.o
+RUN nasm -f elf64 long_mode_init.asm
+RUN ld -n -o kernel.bin -T linker.ld kernel.o multiboot2_header.o long_mode_init.o
 
 # Build an ISO bootable image of the Kernel
 RUN mv kernel.bin isofiles/boot/
